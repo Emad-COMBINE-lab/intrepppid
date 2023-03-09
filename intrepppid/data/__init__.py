@@ -15,3 +15,4 @@
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
 from intrepppid.data.oma import OmaTripletDataModule
+from intrepppid.data.ppi import RapppidDataModule2

@@ -98,6 +98,7 @@ class OmaTripletDataModule(pl.LightningDataModule):
         seqs_path: Path,
         model_path: Path,
         num_workers: int,
+        trunc_len: int
     ):
         super().__init__()
         self.df_val = None
@@ -108,16 +109,17 @@ class OmaTripletDataModule(pl.LightningDataModule):
         self.seqs_path = seqs_path
         self.model_path = model_path
         self.num_workers = num_workers
+        self.trunc_len = trunc_len
 
     def setup(self, stage: str):
         self.df_train = OmaTripletDataset(
-            self.dataset_folder, self.seqs_path, self.model_path, True, "train"
+            self.dataset_folder, self.seqs_path, self.model_path, True, "train", self.trunc_len
         )
         self.df_test = OmaTripletDataset(
-            self.dataset_folder, self.seqs_path, self.model_path, False, "test"
+            self.dataset_folder, self.seqs_path, self.model_path, False, "test", self.trunc_len
         )
         self.df_val = OmaTripletDataset(
-            self.dataset_folder, self.seqs_path, self.model_path, False, "val"
+            self.dataset_folder, self.seqs_path, self.model_path, False, "val", self.trunc_len
         )
 
     def train_dataloader(self):

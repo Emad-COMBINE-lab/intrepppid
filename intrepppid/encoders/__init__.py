@@ -14,5 +14,17 @@
 # License along with this programme. If not, see
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
+from torch import nn
 from intrepppid.encoders.awd_lstm import AWDLSTM
-from intrepppid.encoders.barlow import BarlowEncoder
+from intrepppid.encoders.barlow import BarlowEncoder, make_barlow_encoder
+from typing import Dict, Any
+
+
+def get_encoder(hyperparams: Dict[str, Any]) -> nn.Module:
+    architecture = hyperparams['architecture']
+    del hyperparams[architecture]
+
+    if architecture == "BarlowEncoder":
+        return BarlowEncoder(**architecture)
+    else:
+        raise ValueError("Unexpected architecture. Must be one of 'BarlowEncoder'.")

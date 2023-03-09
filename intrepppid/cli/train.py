@@ -17,7 +17,10 @@
 from passlib import pwd
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
+from random import randint
 from intrepppid.encoders.barlow import train as barlow_train
+from intrepppid.classifier.classifynet import train_classifier_barlow
 
 
 class Train(object):
@@ -37,7 +40,11 @@ class Train(object):
         embedding_droprate: float = 0.3,
         vocab_size: int = 250,
         save_dir: Path = Path("./logs/encoder_barlow"),
+        trunc_len: int = 1500,
+        seed: Optional[int] = None
     ):
+        seed = seed if seed is not None else randint(0, 9999999)
+
         dt = datetime.now()
         dt = dt.strftime("%y.%j-%H.%M")
 
@@ -66,4 +73,48 @@ class Train(object):
             chkpt_dir,
             log_path,
             hyperparams_path,
+            trunc_len,
+            seed
+        )
+
+    @staticmethod
+    def classifier_barlow(
+        barlow_hyperparams_path: Path,
+        barlow_checkpoint_path: Path,
+        ppi_dataset_path: Path,
+        num_epochs: int,
+        batch_size: int,
+        c_type: int,
+        embedding_droprate: float = 0.3,
+        do_rate: float = 0.3,
+        workers: int = 4,
+        seed: Optional[int] = None,
+        fine_tune_epochs: Optional[int] = None,
+        log_path: Path = Path("./logs/classifier_barlow")
+    ):
+        dt = datetime.now()
+        dt = dt.strftime("%y.%j-%H.%M")
+
+        model_name = pwd.genphrase(length=2, sep="-")
+        model_name = f"{dt}-{model_name}"
+
+        chkpt_dir = log_path / model_name / "chkpt"
+        hyperparams_path = log_path / model_name / "hyperparams.json"
+
+        train_classifier_barlow(
+            barlow_hyperparams_path,
+            barlow_checkpoint_path,
+            ppi_dataset_path,
+            log_path,
+            hyperparams_path,
+            chkpt_dir,
+            c_type,
+            model_name,
+            workers,
+            embedding_droprate,
+            do_rate,
+            num_epochs,
+            batch_size,
+            seed,
+            fine_tune_epochs
         )

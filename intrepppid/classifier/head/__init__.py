@@ -14,6 +14,16 @@
 # License along with this programme. If not, see
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
-from intrepppid.utils.weightdrop import WeightDrop
-from intrepppid.utils.dictlogger import DictLogger
-from intrepppid.utils.embedding_do import embedding_dropout
+from intrepppid.classifier.head.mlp import MLPHead
+from typing import Dict, Any
+from torch import nn
+
+
+def get_head(hyperparams: Dict[str, Any]) -> nn.Module:
+    architecture = hyperparams['architecture']
+    del hyperparams[architecture]
+
+    if architecture == "MLPHead":
+        return MLPHead(**architecture)
+    else:
+        raise ValueError("Unexpected architecture. Must be one of 'MLPHead'.")

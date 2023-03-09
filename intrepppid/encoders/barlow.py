@@ -24,8 +24,10 @@ from intrepppid.data import OmaTripletDataModule
 from pathlib import Path
 from intrepppid.encoders import AWDLSTM
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.utilities.seed import seed_everything
 import json
 from os import makedirs
+from intrepppid.utils import embedding_dropout
 
 
 class BarlowTwinsLoss(nn.Module):
@@ -105,30 +107,7 @@ class BarlowEncoder(pl.LightningModule):
         )
 
     def embedding_dropout(self, embed, words, p=0.2):
-        if not self.training:
-            masked_embed_weight = embed.weight
-        elif not p:
-            masked_embed_weight = embed.weight
-        else:
-            mask = embed.weight.data.new().resize_(
-                (embed.weight.size(0), 1)
-            ).bernoulli_(1 - p).expand_as(embed.weight) / (1 - p)
-            masked_embed_weight = mask * embed.weight
-
-        padding_idx = embed.padding_idx
-        if padding_idx is None:
-            padding_idx = -1
-
-        X = F.embedding(
-            words,
-            masked_embed_weight,
-            padding_idx,
-            embed.max_norm,
-            embed.norm_type,
-            embed.scale_grad_by_freq,
-            embed.sparse,
-        )
-        return X
+        return embedding_dropout(self.training, embed, words, p)
 
     def forward(self, x):
         x = self.embedding_dropout(self.embedder, x, p=self.embedding_droprate)
@@ -177,6 +156,20 @@ class BarlowEncoder(pl.LightningModule):
         return optimizer
 
 
+def make_barlow_encoder(vocab_size: int, embedding_size: int, rnn_num_layers: int, rnn_dropout_rate: float,
+                 variational_dropout: bool, bi_reduce: str, batch_size: int, embedding_droprate: float,
+                 num_epochs: int, steps_per_epoch: int):
+    embedder = nn.Embedding(vocab_size, embedding_size)
+    encoder = AWDLSTM(
+        embedding_size, rnn_num_layers, rnn_dropout_rate, variational_dropout, bi_reduce
+    )
+    model = BarlowEncoder(
+        batch_size, embedder, encoder, embedding_droprate, num_epochs, steps_per_epoch
+    )
+
+    return model
+
+
 def train(
     batch_size: int,
     dataset_path: Path,
@@ -195,8 +188,11 @@ def train(
     chkpt_dir: Path,
     log_path: Path,
     hyperparams_path: Path,
+    trunc_len: int,
+    seed: int
 ):
     hyperparameters = {
+        "architecture": "EncoderBarlow",
         "batch_size": batch_size,
         "dataset_path": str(dataset_path),
         "seqs_path": str(seqs_path),
@@ -214,6 +210,8 @@ def train(
         "chkpt_dir": str(chkpt_dir),
         "log_path": str(log_path),
         "hyperparams_path": str(hyperparams_path),
+        "trunc_len": trunc_len,
+        "seed": seed
     }
 
     makedirs(chkpt_dir.parent, exist_ok=True)
@@ -223,20 +221,18 @@ def train(
     with open(hyperparams_path, "w") as f:
         json.dump(hyperparameters, f, indent=3)
 
+    seed_everything(seed)
+
     dict_logger = DictLogger()
     data_module = OmaTripletDataModule(
-        batch_size, dataset_path, seqs_path, model_path, num_workers
+        batch_size, dataset_path, seqs_path, model_path, num_workers, trunc_len
     )
     data_module.setup("training")
     steps_per_epoch = len(data_module.train_dataloader())
 
-    embedder = nn.Embedding(vocab_size, embedding_size)
-    encoder = AWDLSTM(
-        embedding_size, rnn_num_layers, rnn_dropout_rate, variational_dropout, bi_reduce
-    )
-    model = BarlowEncoder(
-        batch_size, embedder, encoder, embedding_droprate, num_epochs, steps_per_epoch
-    )
+    model = make_barlow_encoder(vocab_size, embedding_size, rnn_num_layers, rnn_dropout_rate,
+                            variational_dropout, bi_reduce, batch_size, embedding_droprate,
+                            num_epochs, steps_per_epoch)
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -261,3 +257,5 @@ def train(
 
     with open(log_path, "w") as f:
         json.dump(dict_logger.metrics, f, indent=3)
+
+
