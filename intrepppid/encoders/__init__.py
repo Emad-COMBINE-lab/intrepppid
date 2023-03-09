@@ -21,7 +21,7 @@ from typing import Dict, Any
 
 
 def get_encoder(hyperparams: Dict[str, Any]) -> nn.Module:
-    architecture = hyperparams['architecture']
+    architecture = hyperparams["architecture"]
     del hyperparams[architecture]
 
     if architecture == "BarlowEncoder":

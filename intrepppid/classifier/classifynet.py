@@ -16,8 +16,15 @@ from os import makedirs
 
 
 class ClassifyNet(pl.LightningModule):
-    def __init__(self, encoder, head, embedding_droprate: float, num_epochs: int, steps_per_epoch: int,
-                 fine_tune_epochs: Optional[int] = None):
+    def __init__(
+        self,
+        encoder,
+        head,
+        embedding_droprate: float,
+        num_epochs: int,
+        steps_per_epoch: int,
+        fine_tune_epochs: Optional[int] = None,
+    ):
         super().__init__()
         self.encoder = encoder
         self.embedding_droprate = embedding_droprate
@@ -36,8 +43,10 @@ class ClassifyNet(pl.LightningModule):
         return embedding_dropout(self.training, embed, words, p)
 
     def forward(self, x1, x2):
-
-        if self.fine_tune_epochs is not None and self.current_epoch >= self.num_epochs - self.fine_tune_epochs :
+        if (
+            self.fine_tune_epochs is not None
+            and self.current_epoch >= self.num_epochs - self.fine_tune_epochs
+        ):
             x1 = self.encoder(x1)
             x2 = self.encoder(x2)
         else:
@@ -56,24 +65,24 @@ class ClassifyNet(pl.LightningModule):
 
         loss = self.criterion(y_hat, y.float())
 
-        self.log(f'{stage}_loss', loss, on_epoch=True, on_step=False)
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=False)
 
         auroc = self.auroc(y_hat, y)
-        self.log(f'{stage}_auroc', auroc, on_epoch=True, on_step=False)
+        self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False)
 
         ap = self.average_precision(y_hat, y)
-        self.log(f'{stage}_ap', ap, on_epoch=True, on_step=False)
+        self.log(f"{stage}_ap", ap, on_epoch=True, on_step=False)
 
         return loss
 
     def training_step(self, batch, batch_idx):
-        return self.step(batch, 'train')
+        return self.step(batch, "train")
 
     def validation_step(self, batch, batch_idx):
-        return self.step(batch, 'val')
+        return self.step(batch, "val")
 
     def test_step(self, batch, batch_idx):
-        return self.step(batch, 'test')
+        return self.step(batch, "test")
 
     def configure_optimizers(self):
         optimizer = Ranger21(
@@ -88,7 +97,7 @@ class ClassifyNet(pl.LightningModule):
 
 
 def get_classifynet(hyperparams: Optional[Dict[str, Any]]):
-    architecture = hyperparams['architecture']
+    architecture = hyperparams["architecture"]
     del hyperparams[architecture]
 
 
@@ -107,9 +116,8 @@ def train_classifier_barlow(
     num_epochs: int,
     batch_size: int,
     seed: Optional[int] = None,
-    fine_tune_epochs: Optional[int] = None
-    ):
-
+    fine_tune_epochs: Optional[int] = None,
+):
     makedirs(chkpt_dir, exist_ok=True)
     makedirs(log_path, exist_ok=True)
     makedirs(hyperparams_path.parent, exist_ok=True)
@@ -117,7 +125,7 @@ def train_classifier_barlow(
     with open(barlow_hyperparams_path) as f:
         barlow_hyperparams = json.load(f)
 
-    seed = barlow_hyperparams['seed'] if seed is None else seed
+    seed = barlow_hyperparams["seed"] if seed is None else seed
 
     seed_everything(seed)
 
@@ -136,39 +144,49 @@ def train_classifier_barlow(
         "num_epochs": num_epochs,
         "batch_size": batch_size,
         "seed": seed,
-        "fine_tune_epochs": fine_tune_epochs
+        "fine_tune_epochs": fine_tune_epochs,
     }
 
-    with open(hyperparams_path, 'w') as f:
+    with open(hyperparams_path, "w") as f:
         json.dump(hyperparameters, f)
 
-    data_module = RapppidDataModule2(batch_size=batch_size,
-                                    dataset_path=ppi_dataset_path,
-                                    c_type=c_type,
-                                    trunc_len=barlow_hyperparams['trunc_len'],
-                                    workers=workers,
-                                    vocab_size=barlow_hyperparams['vocab_size'],
-                                    model_file=barlow_hyperparams['model_path'],
-                                    seed=seed
-                                    )
+    data_module = RapppidDataModule2(
+        batch_size=batch_size,
+        dataset_path=ppi_dataset_path,
+        c_type=c_type,
+        trunc_len=barlow_hyperparams["trunc_len"],
+        workers=workers,
+        vocab_size=barlow_hyperparams["vocab_size"],
+        model_file=barlow_hyperparams["model_path"],
+        seed=seed,
+    )
 
     data_module.setup("training")
     steps_per_epoch = len(data_module.train_dataloader())
 
-    encoder = make_barlow_encoder(barlow_hyperparams['vocab_size'], barlow_hyperparams['embedding_size'],
-                                  barlow_hyperparams['rnn_num_layers'], barlow_hyperparams['rnn_dropout_rate'],
-                                  barlow_hyperparams['variational_dropout'], barlow_hyperparams['bi_reduce'],
-                                  barlow_hyperparams['batch_size'], barlow_hyperparams['embedding_droprate'],
-                                  barlow_hyperparams['num_epochs'], steps_per_epoch)
+    encoder = make_barlow_encoder(
+        barlow_hyperparams["vocab_size"],
+        barlow_hyperparams["embedding_size"],
+        barlow_hyperparams["rnn_num_layers"],
+        barlow_hyperparams["rnn_dropout_rate"],
+        barlow_hyperparams["variational_dropout"],
+        barlow_hyperparams["bi_reduce"],
+        barlow_hyperparams["batch_size"],
+        barlow_hyperparams["embedding_droprate"],
+        barlow_hyperparams["num_epochs"],
+        steps_per_epoch,
+    )
 
-    weights = torch.load(barlow_checkpoint_path)['state_dict']
+    weights = torch.load(barlow_checkpoint_path)["state_dict"]
 
     encoder.load_state_dict(weights)
     encoder.eval()
 
-    head = MLPHead(barlow_hyperparams['embedding_size'], do_rate)
+    head = MLPHead(barlow_hyperparams["embedding_size"], do_rate)
 
-    net = ClassifyNet(encoder, head, embedding_droprate, num_epochs, steps_per_epoch, fine_tune_epochs)
+    net = ClassifyNet(
+        encoder, head, embedding_droprate, num_epochs, steps_per_epoch, fine_tune_epochs
+    )
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -184,7 +202,7 @@ def train_classifier_barlow(
         max_epochs=num_epochs,
         precision=16,
         logger=[dict_logger],
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
     )
 
     trainer.fit(net, data_module)

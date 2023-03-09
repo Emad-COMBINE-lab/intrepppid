@@ -156,9 +156,18 @@ class BarlowEncoder(pl.LightningModule):
         return optimizer
 
 
-def make_barlow_encoder(vocab_size: int, embedding_size: int, rnn_num_layers: int, rnn_dropout_rate: float,
-                 variational_dropout: bool, bi_reduce: str, batch_size: int, embedding_droprate: float,
-                 num_epochs: int, steps_per_epoch: int):
+def make_barlow_encoder(
+    vocab_size: int,
+    embedding_size: int,
+    rnn_num_layers: int,
+    rnn_dropout_rate: float,
+    variational_dropout: bool,
+    bi_reduce: str,
+    batch_size: int,
+    embedding_droprate: float,
+    num_epochs: int,
+    steps_per_epoch: int,
+):
     embedder = nn.Embedding(vocab_size, embedding_size)
     encoder = AWDLSTM(
         embedding_size, rnn_num_layers, rnn_dropout_rate, variational_dropout, bi_reduce
@@ -189,7 +198,7 @@ def train(
     log_path: Path,
     hyperparams_path: Path,
     trunc_len: int,
-    seed: int
+    seed: int,
 ):
     hyperparameters = {
         "architecture": "EncoderBarlow",
@@ -211,7 +220,7 @@ def train(
         "log_path": str(log_path),
         "hyperparams_path": str(hyperparams_path),
         "trunc_len": trunc_len,
-        "seed": seed
+        "seed": seed,
     }
 
     makedirs(chkpt_dir.parent, exist_ok=True)
@@ -230,9 +239,18 @@ def train(
     data_module.setup("training")
     steps_per_epoch = len(data_module.train_dataloader())
 
-    model = make_barlow_encoder(vocab_size, embedding_size, rnn_num_layers, rnn_dropout_rate,
-                            variational_dropout, bi_reduce, batch_size, embedding_droprate,
-                            num_epochs, steps_per_epoch)
+    model = make_barlow_encoder(
+        vocab_size,
+        embedding_size,
+        rnn_num_layers,
+        rnn_dropout_rate,
+        variational_dropout,
+        bi_reduce,
+        batch_size,
+        embedding_droprate,
+        num_epochs,
+        steps_per_epoch,
+    )
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -257,5 +275,3 @@ def train(
 
     with open(log_path, "w") as f:
         json.dump(dict_logger.metrics, f, indent=3)
-
-

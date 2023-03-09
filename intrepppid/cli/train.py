@@ -41,7 +41,7 @@ class Train(object):
         vocab_size: int = 250,
         save_dir: Path = Path("./logs/encoder_barlow"),
         trunc_len: int = 1500,
-        seed: Optional[int] = None
+        seed: Optional[int] = None,
     ):
         seed = seed if seed is not None else randint(0, 9999999)
 
@@ -74,7 +74,7 @@ class Train(object):
             log_path,
             hyperparams_path,
             trunc_len,
-            seed
+            seed,
         )
 
     @staticmethod
@@ -90,7 +90,7 @@ class Train(object):
         workers: int = 4,
         seed: Optional[int] = None,
         fine_tune_epochs: Optional[int] = None,
-        log_path: Path = Path("./logs/classifier_barlow")
+        log_path: Path = Path("./logs/classifier_barlow"),
     ):
         dt = datetime.now()
         dt = dt.strftime("%y.%j-%H.%M")
@@ -116,5 +116,5 @@ class Train(object):
             num_epochs,
             batch_size,
             seed,
-            fine_tune_epochs
+            fine_tune_epochs,
         )

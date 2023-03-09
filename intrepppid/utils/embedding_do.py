@@ -7,9 +7,9 @@ def embedding_dropout(training, embed, words, p=0.2):
     elif not p:
         masked_embed_weight = embed.weight
     else:
-        mask = embed.weight.data.new().resize_(
-            (embed.weight.size(0), 1)
-        ).bernoulli_(1 - p).expand_as(embed.weight) / (1 - p)
+        mask = embed.weight.data.new().resize_((embed.weight.size(0), 1)).bernoulli_(
+            1 - p
+        ).expand_as(embed.weight) / (1 - p)
         masked_embed_weight = mask * embed.weight
 
     padding_idx = embed.padding_idx

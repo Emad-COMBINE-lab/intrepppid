@@ -20,7 +20,7 @@ from torch import nn
 
 
 def get_head(hyperparams: Dict[str, Any]) -> nn.Module:
-    architecture = hyperparams['architecture']
+    architecture = hyperparams["architecture"]
     del hyperparams[architecture]
 
     if architecture == "MLPHead":
