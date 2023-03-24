@@ -16,12 +16,13 @@
 
 
 import fire
-from intrepppid.cli import Train
+from intrepppid.cli import Train, Test
 
 
 class Pipeline(object):
     def __init__(self):
         self.train = Train
+        self.test = Test
 
 
 if __name__ == "__main__":
