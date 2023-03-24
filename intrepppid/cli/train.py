@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Optional
 from random import randint
 from intrepppid.encoders.barlow import train as barlow_train
-from intrepppid.classifier.classifynet import train_classifier_barlow
+from intrepppid.classifier.barlow import train_classifier_barlow
 
 
 class Train(object):
