@@ -44,7 +44,7 @@ class AWDLSTM(nn.Module):
         )
 
         self.fc = nn.Linear(embedding_size, embedding_size)
-        self.nl = nn.ReLU()
+        self.nl = nn.Mish()
         self.embedding_size = embedding_size
 
     def forward(self, x):
@@ -68,6 +68,6 @@ class AWDLSTM(nn.Module):
             x = hn[-1:, :, :].squeeze(0)
 
         x = self.fc(x)
-        x = self.nl(x)
+        # x = self.nl(x)
 
         return x

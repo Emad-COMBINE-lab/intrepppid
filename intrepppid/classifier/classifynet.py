@@ -27,6 +27,9 @@ class ClassifyNet(pl.LightningModule):
 
         self.auroc = torchmetrics.AUROC(task="binary")
         self.average_precision = torchmetrics.AveragePrecision(task="binary")
+        self.mcc = torchmetrics.MatthewsCorrCoef(task="binary", threshold=0.5)
+        self.precision_metric = torchmetrics.Precision(task="binary")
+        self.recall = torchmetrics.Recall(task="binary")
 
         self.do_rate = 0.3
         self.head = head
@@ -57,13 +60,22 @@ class ClassifyNet(pl.LightningModule):
 
         loss = self.criterion(y_hat, y.float())
 
-        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=False)
+        self.log(f"{stage}_loss", loss, on_epoch=True, on_step=False, prog_bar=True)
 
         auroc = self.auroc(y_hat, y)
         self.log(f"{stage}_auroc", auroc, on_epoch=True, on_step=False)
 
         ap = self.average_precision(y_hat, y)
         self.log(f"{stage}_ap", ap, on_epoch=True, on_step=False)
+
+        mcc = self.mcc(y_hat, y)
+        self.log(f"{stage}_mcc", mcc, on_epoch=True, on_step=False)
+
+        pr = self.precision_metric(y_hat, y)
+        self.log(f"{stage}_precision", pr, on_epoch=True, on_step=False)
+
+        rec = self.recall(y_hat, y)
+        self.log(f"{stage}_rec", rec, on_epoch=True, on_step=False)
 
         return loss
 

@@ -22,11 +22,12 @@ import pytorch_lightning as pl
 from intrepppid.utils import DictLogger
 from intrepppid.data import OmaTripletDataModule
 from pathlib import Path
-from intrepppid.encoders import AWDLSTM
+from intrepppid.encoders import AWDLSTM, Transformers
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.utilities.seed import seed_everything
 import json
 from os import makedirs
+from typing import Union, Callable
 from intrepppid.utils import embedding_dropout
 
 
@@ -110,6 +111,10 @@ class BarlowEncoder(pl.LightningModule):
         return embedding_dropout(self.training, embed, words, p)
 
     def forward(self, x):
+        # Truncate to the longest sequence in batch
+        max_len = torch.max(torch.sum(x != 0, axis=1))
+        x = x[:, :max_len]
+
         x = self.embedding_dropout(self.embedder, x, p=self.embedding_droprate)
         x = self.encoder(x)
 
@@ -156,7 +161,7 @@ class BarlowEncoder(pl.LightningModule):
         return optimizer
 
 
-def make_barlow_encoder(
+def make_rnn_barlow_encoder(
     vocab_size: int,
     embedding_size: int,
     rnn_num_layers: int,
@@ -168,7 +173,7 @@ def make_barlow_encoder(
     num_epochs: int,
     steps_per_epoch: int,
 ):
-    embedder = nn.Embedding(vocab_size, embedding_size)
+    embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
     encoder = AWDLSTM(
         embedding_size, rnn_num_layers, rnn_dropout_rate, variational_dropout, bi_reduce
     )
@@ -179,7 +184,44 @@ def make_barlow_encoder(
     return model
 
 
-def train(
+def make_transformers_barlow_encoder(
+    vocab_size: int,
+    embedding_size: int,
+    num_layers: int,
+    dropout_rate: float,
+    feedforward_size: int,
+    num_heads: int,
+    activation_fn: Union[str, Callable],
+    layer_norm: float,
+    batch_size: int,
+    embedding_droprate: float,
+    num_epochs: int,
+    steps_per_epoch: int,
+    trunc_len: int,
+    mean: bool = True,
+    truncate_to_longest: bool = True
+):
+    embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
+    encoder = Transformers(
+        embedding_size=embedding_size,
+        num_layers=num_layers,
+        feedforward_size=feedforward_size,
+        dropout_rate=dropout_rate,
+        num_heads=num_heads,
+        activation_fn=activation_fn,
+        layer_norm=layer_norm,
+        trunc_len=trunc_len,
+        mean=mean,
+        truncate_to_longest=truncate_to_longest
+    )
+    model = BarlowEncoder(
+        batch_size, embedder, encoder, embedding_droprate, num_epochs, steps_per_epoch
+    )
+
+    return model
+
+
+def train_rnn(
     batch_size: int,
     dataset_path: Path,
     seqs_path: Path,
@@ -239,7 +281,7 @@ def train(
     data_module.setup("training")
     steps_per_epoch = len(data_module.train_dataloader())
 
-    model = make_barlow_encoder(
+    model = make_rnn_barlow_encoder(
         vocab_size,
         embedding_size,
         rnn_num_layers,
@@ -250,6 +292,109 @@ def train(
         embedding_droprate,
         num_epochs,
         steps_per_epoch,
+    )
+
+    checkpoint_callback = ModelCheckpoint(
+        monitor="val_loss",
+        dirpath=chkpt_dir,
+        filename=model_name + "-{epoch:02d}-{val_loss:.2f}",
+    )
+
+    trainer = pl.Trainer(
+        accelerator="gpu",
+        devices=1,
+        max_epochs=num_epochs,
+        precision=16,
+        logger=[dict_logger],
+        callbacks=[checkpoint_callback],
+        deterministic=True,
+    )
+    trainer.fit(model, data_module)
+
+    test_results = trainer.test(dataloaders=data_module, ckpt_path="best")
+
+    dict_logger.metrics["test_results"] = test_results
+
+    with open(log_path, "w") as f:
+        json.dump(dict_logger.metrics, f, indent=3)
+
+
+def train_transformers(
+    batch_size: int,
+    dataset_path: Path,
+    seqs_path: Path,
+    model_path: Path,
+    num_workers: int,
+    feedforward_size: int,
+    embedding_size: int,
+    num_layers: int,
+    num_heads: int,
+    dropout_rate: float,
+    embedding_droprate: float,
+    num_epochs: int,
+    layer_norm: float,
+    vocab_size: int,
+    model_name: str,
+    chkpt_dir: Path,
+    log_path: Path,
+    hyperparams_path: Path,
+    trunc_len: int,
+    seed: int,
+):
+    hyperparameters = {
+        "architecture": "EncoderTransformerBarlow",
+        "batch_size": batch_size,
+        "dataset_path": str(dataset_path),
+        "seqs_path": str(seqs_path),
+        "model_path": str(model_path),
+        "num_workers": num_workers,
+        "feedforward_size": feedforward_size,
+        "embedding_size": embedding_size,
+        "num_layers": num_layers,
+        "num_heads": num_heads,
+        "dropout_rate": dropout_rate,
+        "embedding_droprate": embedding_droprate,
+        "num_epochs": num_epochs,
+        "layer_norm": layer_norm,
+        "vocab_size": vocab_size,
+        "model_name": model_name,
+        "chkpt_dir": str(chkpt_dir),
+        "log_path": str(log_path),
+        "hyperparams_path": str(hyperparams_path),
+        "trunc_len": trunc_len,
+        "seed": seed,
+    }
+
+    makedirs(chkpt_dir.parent, exist_ok=True)
+    makedirs(log_path.parent, exist_ok=True)
+    makedirs(hyperparams_path.parent, exist_ok=True)
+
+    with open(hyperparams_path, "w") as f:
+        json.dump(hyperparameters, f, indent=3)
+
+    seed_everything(seed)
+
+    dict_logger = DictLogger()
+    data_module = OmaTripletDataModule(
+        batch_size, dataset_path, seqs_path, model_path, num_workers, trunc_len
+    )
+    data_module.setup("training")
+    steps_per_epoch = len(data_module.train_dataloader())
+
+    model = make_transformers_barlow_encoder(
+        vocab_size=vocab_size,
+        embedding_size=embedding_size,
+        num_layers=num_layers,
+        dropout_rate=dropout_rate,
+        feedforward_size=feedforward_size,
+        num_heads=num_heads,
+        activation_fn="gelu",
+        layer_norm=layer_norm,
+        batch_size=batch_size,
+        embedding_droprate=embedding_droprate,
+        num_epochs=num_epochs,
+        steps_per_epoch=steps_per_epoch,
+        trunc_len=trunc_len,
     )
 
     checkpoint_callback = ModelCheckpoint(

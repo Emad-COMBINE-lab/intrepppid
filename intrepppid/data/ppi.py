@@ -71,7 +71,7 @@ class RapppidDataset2(Dataset):
         p2_seq = torch.tensor(p2_seq).long()
         label = torch.tensor(label).long()
 
-        return (p1_seq, p2_seq, label)
+        return p1_seq, p2_seq, label
 
     def __len__(self):
         with tb.open_file(self.dataset_path) as dataset:

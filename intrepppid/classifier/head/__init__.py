@@ -15,6 +15,7 @@
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
 from intrepppid.classifier.head.mlp import MLPHead
+from intrepppid.classifier.head.attention import AttentionHead
 from typing import Dict, Any
 from torch import nn
 

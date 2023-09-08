@@ -16,7 +16,12 @@
 
 from torch import nn
 from intrepppid.encoders.awd_lstm import AWDLSTM
-from intrepppid.encoders.barlow import BarlowEncoder, make_barlow_encoder
+from intrepppid.encoders.transformer import Transformers
+from intrepppid.encoders.barlow import (
+    BarlowEncoder,
+    make_rnn_barlow_encoder,
+    make_transformers_barlow_encoder,
+)
 from typing import Dict, Any
 
 
