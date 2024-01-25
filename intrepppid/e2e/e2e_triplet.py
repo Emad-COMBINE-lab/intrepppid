@@ -28,12 +28,13 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities.seed import seed_everything
 from torch import nn
 import torchmetrics
+from torch.optim.lr_scheduler import OneCycleLR, CosineAnnealingWarmRestarts
 
 from intrepppid.classifier.head import MLPHead
 from intrepppid.utils import embedding_dropout, DictLogger
 from torch.optim import AdamW
 from ranger21 import Ranger21
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from intrepppid.encoders.barlow import make_rnn_barlow_encoder, make_transformers_barlow_encoder
 from intrepppid.data.ppi_oma import IntrepppidDataModule
 
@@ -48,7 +49,9 @@ class TripletE2ENet(pl.LightningModule):
         num_epochs: int,
         steps_per_epoch: int,
         beta_classifier: float,
-        use_projection: bool
+        use_projection: bool,
+        optimizer_type: str,
+        lr: float
     ):
         super().__init__()
         self.encoder = encoder
@@ -73,6 +76,9 @@ class TripletE2ENet(pl.LightningModule):
         self.do_rate = 0.3
         self.head = head
         self.beta_classifier = beta_classifier
+
+        self.optimizer_type = optimizer_type
+        self.lr = lr
 
         self.use_projection = use_projection
 
@@ -172,18 +178,56 @@ class TripletE2ENet(pl.LightningModule):
         return self.step(batch, "test")
 
     def configure_optimizers(self):
-        optimizer = Ranger21(
-            self.parameters(),
-            use_warmup=False,
-            warmdown_active=False,
-            lr=1e-2,
-            weight_decay=1e-2,
-            num_batches_per_epoch=self.steps_per_epoch,
-            num_epochs=self.num_epochs,
-            warmdown_start_pct=0.72,
-        )
 
-        return optimizer
+        if self.optimizer_type == "ranger21":
+            optimizer = Ranger21(
+                self.parameters(),
+                use_warmup=False,
+                warmdown_active=False,
+                lr=self.lr,
+                weight_decay=1e-2,
+                num_batches_per_epoch=self.steps_per_epoch,
+                num_epochs=self.num_epochs,
+                warmdown_start_pct=0.72,
+            )
+
+            return optimizer
+
+        elif self.optimizer_type == "ranger21_xx":
+            optimizer = Ranger21(
+                self.parameters(),
+                use_warmup=True,
+                warmdown_active=True,
+                lr=self.lr,
+                weight_decay=1e-2,
+                num_batches_per_epoch=self.steps_per_epoch,
+                num_epochs=self.num_epochs,
+                warmdown_start_pct=0.72,
+            )
+
+            return optimizer
+
+        elif self.optimizer_type == "adamw":
+            optimizer = AdamW(self.parameters(), lr=self.lr)
+
+            return optimizer
+
+        elif self.optimizer_type == "adamw_1cycle":
+            optimizer = AdamW(self.parameters(), lr=self.lr)
+            scheduler = OneCycleLR(optimizer, self.lr, epochs=self.num_epochs, steps_per_epoch=self.steps_per_epoch)
+
+            return [optimizer], [scheduler]
+
+        elif self.optimizer_type == "adamw_cosine":
+            optimizer = AdamW(self.parameters(), lr=self.lr)
+            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
+
+            return [optimizer], [scheduler]
+
+        else:
+            raise ValueError(
+                'Expected one of "ranger21", "adamw", "ranger21_xx", or "adamw_1cycle" as the optimizer type.'
+            )
 
 
 def train_e2e_rnn_triplet(
@@ -209,8 +253,10 @@ def train_e2e_rnn_triplet(
     encoder_only_steps: int,
     classifier_warm_up: int,
     beta_classifier: float,
+    lr: Union[float, str] = 1e-2,
     checkpoint_path: Optional[Path] = None,
     use_projection: bool = True,
+    optimizer_type: str = "ranger21",
     seed: Optional[int] = None,
 ):
     makedirs(chkpt_dir, exist_ok=True)
@@ -224,6 +270,7 @@ def train_e2e_rnn_triplet(
     hyperparameters = {
         "architecture": "ClassifierBarlow",
         "vocab_size": vocab_size,
+        "lr": lr,
         "trunc_len": trunc_len,
         "embedding_size": embedding_size,
         "rnn_num_layers": rnn_num_layers,
@@ -247,6 +294,7 @@ def train_e2e_rnn_triplet(
         "checkpoint_path": checkpoint_path,
         "use_projection": use_projection,
         "seed": seed,
+        "optimizer_type": optimizer_type
     }
 
     with open(hyperparams_path, "w") as f:
@@ -293,7 +341,15 @@ def train_e2e_rnn_triplet(
         steps_per_epoch,
         beta_classifier,
         use_projection,
+        optimizer_type,
+        lr if lr is not "auto" else 1e-2
     )
+
+    num_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
+
+    print("######")
+    print(f"NUM PARAMS:{num_params}")
+    print("######")
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -315,6 +371,28 @@ def train_e2e_rnn_triplet(
         callbacks=[checkpoint_callback, lr_monitor, swa],
         log_every_n_steps=2,
     )
+
+    if lr == "auto":
+        lr_finder = trainer.tuner.lr_find(net, datamodule=data_module)
+        new_lr = lr_finder.suggestion()
+        hyperparameters["new_lr"] = new_lr
+
+        print(f"Found LR: {new_lr}")
+
+        net.lr = new_lr
+
+        # Redeclaring this so I can update the SWA calback with the new LR
+        swa = StochasticWeightAveraging(swa_lrs=new_lr)
+
+        trainer = pl.Trainer(
+            accelerator="gpu",
+            devices=1,
+            max_epochs=num_epochs,
+            precision=16,
+            logger=[dict_logger, tb_logger],
+            callbacks=[checkpoint_callback, lr_monitor, swa],
+            log_every_n_steps=2,
+        )
 
     trainer.fit(net, data_module, ckpt_path=checkpoint_path)
 
@@ -443,7 +521,9 @@ def train_e2e_transformer_triplet(
         num_epochs=num_epochs,
         steps_per_epoch=steps_per_epoch,
         beta_classifier=beta_classifier,
-        use_projection=use_projection
+        use_projection=use_projection,
+        optimizer_type=optimizer_type,
+        lr=1e-2
     )
 
     checkpoint_callback = ModelCheckpoint(

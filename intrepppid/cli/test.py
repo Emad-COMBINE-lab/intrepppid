@@ -37,28 +37,28 @@ class Test(object):
         checkpoint_path: Path,
         hyperparams_path: Path,
         workers: Optional[int],
-        gpu: bool
+        gpu: bool = False
     ):
         with open(hyperparams_path) as f:
             hyperparams = json.load(f)
 
-        with open(hyperparams["barlow_hyperparams_path"]) as f:
-            barlow_hyperparams = json.load(f)
+        #with open(hyperparams["barlow_hyperparams_path"]) as f:
+         #   barlow_hyperparams = json.load(f)
 
         data_module = RapppidDataModule2(
             batch_size=hyperparams["batch_size"],
             dataset_path=dataset_path,
             c_type=c_type,
-            trunc_len=barlow_hyperparams["trunc_len"],
+            trunc_len=hyperparams["trunc_len"],
             workers=workers if workers is not None else hyperparams["workers"],
-            vocab_size=barlow_hyperparams["vocab_size"],
-            model_file=barlow_hyperparams["model_path"],
+            vocab_size=hyperparams["vocab_size"],
+            model_file=hyperparams["sentencepiece_path"],
             seed=hyperparams["seed"],
         )
 
         net = make_classifier_barlow(
-            hyperparams["barlow_hyperparams_path"],
-            hyperparams["barlow_checkpoint_path"],
+            hyperparams_path,
+            checkpoint_path,
             hyperparams["embedding_droprate"],
             hyperparams["do_rate"],
             1,

@@ -17,7 +17,7 @@
 from passlib import pwd
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 from random import randint
 
 from intrepppid.e2e.e2e_barlow import train_e2e_rnn_barlow
@@ -395,8 +395,10 @@ class Train(object):
             encoder_only_steps: int = -1,
             classifier_warm_up: int = -1,
             beta_classifier: float = 4.0,
+            lr: Union[float, str] = 1e-2,
             use_projection: bool = False,
             checkpoint_path: Optional[Path] = None,
+            optimizer_type: str = "ranger21"
     ):
         dt = datetime.now()
         dt = dt.strftime("%y.%j-%H.%M")
@@ -432,8 +434,10 @@ class Train(object):
             encoder_only_steps,
             classifier_warm_up,
             beta_classifier,
+            lr,
             checkpoint_path,
             use_projection,
+            optimizer_type,
             seed,
         )
 
