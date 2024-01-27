@@ -23,6 +23,7 @@ class Pipeline(object):
     """
     The INTREPPPID CLI
     """
+
     def __init__(self):
         self.train = Train
 

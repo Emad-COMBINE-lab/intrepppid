@@ -52,7 +52,7 @@ class TripletE2ENet(pl.LightningModule):
         beta_classifier: float,
         use_projection: bool,
         optimizer_type: str,
-        lr: float
+        lr: float,
     ):
         """
         Create an end-to-end INTREPPPID network which uses a triplet loss for the orthologue task.
@@ -122,7 +122,9 @@ class TripletE2ENet(pl.LightningModule):
             z_omid_positive = self.encoder(omid_positive_seq)
             z_omid_negative = self.encoder(omid_negative_seq)
 
-        triplet_loss = self.triplet_criterion(z_omid_anchor, z_omid_positive, z_omid_negative)
+        triplet_loss = self.triplet_criterion(
+            z_omid_anchor, z_omid_positive, z_omid_negative
+        )
 
         y_hat = self(p1_seq, p2_seq).squeeze(1)
 
@@ -230,13 +232,20 @@ class TripletE2ENet(pl.LightningModule):
 
         elif self.optimizer_type == "adamw_1cycle":
             optimizer = AdamW(self.parameters(), lr=self.lr)
-            scheduler = OneCycleLR(optimizer, self.lr, epochs=self.num_epochs, steps_per_epoch=self.steps_per_epoch)
+            scheduler = OneCycleLR(
+                optimizer,
+                self.lr,
+                epochs=self.num_epochs,
+                steps_per_epoch=self.steps_per_epoch,
+            )
 
             return [optimizer], [scheduler]
 
         elif self.optimizer_type == "adamw_cosine":
             optimizer = AdamW(self.parameters(), lr=self.lr)
-            scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2, eta_min=1e-6)
+            scheduler = CosineAnnealingWarmRestarts(
+                optimizer, T_0=10, T_mult=2, eta_min=1e-6
+            )
 
             return [optimizer], [scheduler]
 
@@ -310,7 +319,7 @@ def train_e2e_rnn_triplet(
         "checkpoint_path": checkpoint_path,
         "use_projection": use_projection,
         "seed": seed,
-        "optimizer_type": optimizer_type
+        "optimizer_type": optimizer_type,
     }
 
     with open(hyperparams_path, "w") as f:
@@ -327,7 +336,7 @@ def train_e2e_rnn_triplet(
         seed=seed,
         sos=False,
         eos=False,
-        negative_omid=True
+        negative_omid=True,
     )
 
     data_module.setup("training")
@@ -342,7 +351,7 @@ def train_e2e_rnn_triplet(
         rnn_num_layers,
         rnn_dropout_rate,
         variational_dropout,
-        bi_reduce
+        bi_reduce,
     )
 
     head = MLPHead(embedding_size, do_rate)
@@ -360,7 +369,7 @@ def train_e2e_rnn_triplet(
         beta_classifier,
         use_projection,
         optimizer_type,
-        lr
+        lr,
     )
 
     num_params = sum(p.numel() for p in net.parameters() if p.requires_grad)

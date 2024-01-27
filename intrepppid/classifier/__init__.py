@@ -13,5 +13,3 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with this programme. If not, see
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
-
-

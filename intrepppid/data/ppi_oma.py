@@ -37,7 +37,7 @@ class IntrepppidDataset2(Dataset):
         trunc_len=1000,
         sos=False,
         eos=False,
-        negative_omid=False
+        negative_omid=False,
     ):
         super().__init__()
 
@@ -60,10 +60,7 @@ class IntrepppidDataset2(Dataset):
 
         if self.negative_omid:
             with tb.open_file(self.dataset_path) as dataset:
-                self.all_omids = [
-                    x[0]
-                    for x in dataset.root.orthologs.iterrows()
-                ]
+                self.all_omids = [x[0] for x in dataset.root.orthologs.iterrows()]
 
     @staticmethod
     def static_encode(
@@ -189,7 +186,7 @@ class IntrepppidDataModule2(pl.LightningDataModule):
         seed: int,
         sos: bool,
         eos: bool,
-        negative_omid: bool = False
+        negative_omid: bool = False,
     ):
         super().__init__()
 
@@ -226,7 +223,7 @@ class IntrepppidDataModule2(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
         self.dataset_val = IntrepppidDataset2(
             self.dataset_path,
@@ -236,7 +233,7 @@ class IntrepppidDataModule2(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
         self.dataset_test = IntrepppidDataset2(
             self.dataset_path,
@@ -246,7 +243,7 @@ class IntrepppidDataModule2(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
 
     def train_dataloader(self):
@@ -284,7 +281,7 @@ class IntrepppidDataset(Dataset):
         trunc_len: int = 1000,
         sos: bool = False,
         eos: bool = False,
-        negative_omid: bool = False
+        negative_omid: bool = False,
     ):
         """
         Builds a PyTorch dataset from an HDF5 dataset in the INTREPPPID format.
@@ -323,20 +320,28 @@ class IntrepppidDataset(Dataset):
 
         with tb.open_file(self.dataset_path) as dataset:
             print("loading interactions...")
-            for row in dataset.root["interactions"][f"c{self.c_type}"][f"c{self.c_type}_{self.split}"]:
-                p1, p2, omid_pid, omid_id, label = row['protein_id1'].decode('utf8'), row['protein_id2'].decode('utf8'), row['omid_protein_id'].decode('utf8'), row['omid_id'], row['label']
+            for row in dataset.root["interactions"][f"c{self.c_type}"][
+                f"c{self.c_type}_{self.split}"
+            ]:
+                p1, p2, omid_pid, omid_id, label = (
+                    row["protein_id1"].decode("utf8"),
+                    row["protein_id2"].decode("utf8"),
+                    row["omid_protein_id"].decode("utf8"),
+                    row["omid_id"],
+                    row["label"],
+                )
                 self.interactions.append((p1, p2, omid_pid, omid_id, label))
 
             print("loading sequences...")
             for row in dataset.root.sequences.iterrows():
-                name = row['name'].decode("utf8")
-                sequence = row['sequence'].decode("utf8")
+                name = row["name"].decode("utf8")
+                sequence = row["sequence"].decode("utf8")
                 self.sequences[name] = sequence
 
             print("loading orthogroups...")
             for row in dataset.root.orthologs.iterrows():
-                ortholog_group_id = row['ortholog_group_id']
-                protein_id = row['protein_id'].decode("utf8")
+                ortholog_group_id = row["ortholog_group_id"]
+                protein_id = row["protein_id"].decode("utf8")
                 self.omid_members[ortholog_group_id].append(protein_id)
 
     @staticmethod
@@ -523,7 +528,7 @@ class IntrepppidDataModule(pl.LightningDataModule):
         seed: int,
         sos: bool,
         eos: bool,
-        negative_omid: bool = False
+        negative_omid: bool = False,
     ):
         """
         A `PyTorch Lightning <https://lightning.ai/docs/pytorch/stable/>`_ `Data Module <https://lightning.ai/docs/pytorch/1.9.3/api/pytorch_lightning.core.LightningDataModule.html>`_ for INTREPPPID datasets.
@@ -580,7 +585,7 @@ class IntrepppidDataModule(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
         self.dataset_val = IntrepppidDataset(
             self.dataset_path,
@@ -590,7 +595,7 @@ class IntrepppidDataModule(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
         self.dataset_test = IntrepppidDataset(
             self.dataset_path,
@@ -600,7 +605,7 @@ class IntrepppidDataModule(pl.LightningDataModule):
             self.trunc_len,
             self.sos,
             self.eos,
-            self.negative_omid
+            self.negative_omid,
         )
 
     def train_dataloader(self):

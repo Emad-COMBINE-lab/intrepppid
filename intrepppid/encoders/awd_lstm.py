@@ -114,7 +114,7 @@ class AWDLSTMEncoder(nn.Module):
         rnn_num_layers: int,
         rnn_dropout_rate: float,
         variational_dropout: bool,
-        bi_reduce: str
+        bi_reduce: str,
     ):
         """
         Represents an AWD-LSTM encoder.
@@ -135,7 +135,7 @@ class AWDLSTMEncoder(nn.Module):
             rnn_num_layers,
             rnn_dropout_rate,
             variational_dropout,
-            bi_reduce
+            bi_reduce,
         )
         self.projection = Projection(
             self.encoder.embedding_size, self.encoder.embedding_size * 2, 3

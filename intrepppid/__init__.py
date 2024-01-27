@@ -21,20 +21,20 @@ from intrepppid.classifier.head import MLPHead
 
 
 def intrepppid_network(
-        steps_per_epoch: int,
-        vocab_size: int = 250,
-        embedding_size: int = 64,
-        rnn_num_layers: int = 2,
-        rnn_dropout_rate: float = 0.3,
-        variational_dropout: bool = False,
-        bi_reduce: str = "last",
-        embedding_droprate: float = 0.3,
-        num_epochs: int = 100,
-        do_rate: float = 0.3,
-        beta_classifier: int = 2,
-        lr: float = 1e-2,
-        use_projection: bool = False,
-        optimizer_type: str = "ranger21_xx"
+    steps_per_epoch: int,
+    vocab_size: int = 250,
+    embedding_size: int = 64,
+    rnn_num_layers: int = 2,
+    rnn_dropout_rate: float = 0.3,
+    variational_dropout: bool = False,
+    bi_reduce: str = "last",
+    embedding_droprate: float = 0.3,
+    num_epochs: int = 100,
+    do_rate: float = 0.3,
+    beta_classifier: int = 2,
+    lr: float = 1e-2,
+    use_projection: bool = False,
+    optimizer_type: str = "ranger21_xx",
 ):
     """
     This builds a PyTorch nn.Module which represents the INTREPPPID network as
@@ -67,7 +67,7 @@ def intrepppid_network(
         rnn_num_layers,
         rnn_dropout_rate,
         variational_dropout,
-        bi_reduce
+        bi_reduce,
     )
 
     head = MLPHead(embedding_size, do_rate)
@@ -82,7 +82,7 @@ def intrepppid_network(
         beta_classifier,
         use_projection,
         optimizer_type,
-        lr
+        lr,
     )
 
     return net
