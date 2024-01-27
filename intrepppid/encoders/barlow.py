@@ -33,6 +33,19 @@ from intrepppid.utils import embedding_dropout
 
 class BarlowTwinsLoss(nn.Module):
     def __init__(self, batch_size, lambda_coeff=5e-3, z_dim=128, eps=1e-5):
+        """
+        This is an implementation of Barlow Twin Loss by Ananya Harsh Jha
+        and is used here under the auspices of the CC-BY-SA license.
+        https://lightning.ai/docs/pytorch/2.1.0/notebooks/lightning_examples/barlow-twins.html
+
+        See https://arxiv.org/abs/2103.03230 for more details.
+
+        :param batch_size: The size of the batch to use
+        :param lambda_coeff: The lambda coefficient, as specified in the linked pre-print above.
+        :param z_dim: The size of the latent vector.
+        :param eps: A number much smaller than 1 to avoid divide-by-zero errors.
+        """
+
         super().__init__()
 
         self.z_dim = z_dim
@@ -62,6 +75,13 @@ class BarlowTwinsLoss(nn.Module):
 
 class Projection(nn.Module):
     def __init__(self, in_dim, out_dim, num_layers):
+        """
+        This module implements a simple MLP which is used as a projection layer.
+
+        :param in_dim: The size of the input vector
+        :param out_dim: The size of the output vector
+        :param num_layers: The total number of layers
+        """
         super().__init__()
 
         diff_dim = (out_dim - in_dim) // num_layers
@@ -94,6 +114,16 @@ class BarlowEncoder(pl.LightningModule):
         num_epochs,
         steps_per_epoch,
     ):
+        """
+        Represents an encoder that can be pre-trained on its own with a Barlow Encoder.
+
+        :param batch_size: The size of the batch. The first axis is the batch dimension.
+        :param embedder: The object responsible for embedding sequences. Must follow the nn.Embedding API.
+        :param encoder: The nn.Module responsible for encoding embedded sequences.
+        :param embedding_droprate: The drop-rate to use for the Embedding Dropout (a la AWD-LSTM).
+        :param num_epochs: Number of Epochs to train the encoder for. Only relevant if pre-training the Encoder with Barlow loss.
+        :param steps_per_epoch: Number of Steps per Epoch. Only relevant if pre-training the Encoder with Barlow loss.
+        """
         super().__init__()
         self.embedder = embedder
         self.embedding_droprate = embedding_droprate
@@ -173,6 +203,22 @@ def make_rnn_barlow_encoder(
     num_epochs: int,
     steps_per_epoch: int,
 ):
+    """
+    Returns a bi-directional AWD-LSTM Encoder that can optionally be pre-trained using the Barlow loss function.
+
+    Uses the PyTorch nn.Embedding object as the embedder.
+
+    :param vocab_size: The number of tokens in the vocabulary (used by the embedder).
+    :param embedding_size: The size of embedding vectors.
+    :param rnn_num_layers: The number of layers in the AWD-LSTM.
+    :param rnn_dropout_rate: The drop-connect rate for the AWD-LSTM
+    :param variational_dropout: When True, uses Variational Dropout. See the AWD-LSTM preprint for details.
+    :param bi_reduce: Method to reduce the two LSTM embeddings for both directions. Must be one of "concat", "max", "mean", "last"
+    :param batch_size: The batch size.
+    :param embedding_droprate: The object responsible for embedding sequences. Must follow the nn.Embedding API.
+    :param num_epochs: Number of Epochs to train the encoder for. Only relevant if pre-training the Encoder with Barlow loss.
+    :param steps_per_epoch: Number of Steps per Epoch. Only relevant if pre-training the Encoder with Barlow loss.
+    """
     embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
     encoder = AWDLSTM(
         embedding_size, rnn_num_layers, rnn_dropout_rate, variational_dropout, bi_reduce
@@ -201,6 +247,25 @@ def make_transformers_barlow_encoder(
     mean: bool = True,
     truncate_to_longest: bool = True
 ):
+    """
+    Returns a Transformer Encoder that can optionally be pre-trained using the Barlow loss function.
+
+    :param vocab_size: The number of tokens in the vocabulary (used by the embedder).
+    :param embedding_size: The size of embedding vectors.
+    :param num_layers: The number of layers in the Transformer encoder.
+    :param dropout_rate: The dropout rate for the Transformer encoder.
+    :param feedforward_size: The size of the feedforward network for the Transformer encoder.
+    :param num_heads: The number of attention heads for the Transformer encoder.
+    :param activation_fn: The activation function to be used for the Transformer. Must be "relu" or "gelu" or a callable activation function.
+    :param layer_norm: Apply layer norm if True.
+    :param batch_size: The batch size.
+    :param embedding_droprate: The object responsible for embedding sequences. Must follow the nn.Embedding API.
+    :param num_epochs: Number of Epochs to train the encoder for. Only relevant if pre-training the Encoder with Barlow loss.
+    :param steps_per_epoch: Number of Steps per Epoch. Only relevant if pre-training the Encoder with Barlow loss.
+    :param trunc_len: The length at which to truncate sequences.
+    :param mean: Mean the output of the Transformer.
+    :param truncate_to_longest: Truncate each batch to the longest sequence therein.
+    """
     embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
     encoder = Transformers(
         embedding_size=embedding_size,

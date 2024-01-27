@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with this programme. If not, see
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
+
 import json
 import random
 from os import makedirs
@@ -42,9 +43,9 @@ from intrepppid.data.ppi_oma import IntrepppidDataModule
 class TripletE2ENet(pl.LightningModule):
     def __init__(
         self,
-        embedding_size,
-        encoder,
-        head,
+        embedding_size: int,
+        encoder: nn.Module,
+        head: nn.Module,
         embedding_droprate: float,
         num_epochs: int,
         steps_per_epoch: int,
@@ -53,6 +54,22 @@ class TripletE2ENet(pl.LightningModule):
         optimizer_type: str,
         lr: float
     ):
+        """
+        Create an end-to-end INTREPPPID network which uses a triplet loss for the orthologue task.
+
+        This is a scaffold which requires an encoder and classifier to be specified.
+
+        :param embedding_size: The size of the embeddings to use.
+        :param encoder: The encoder neural network to use to embed the amino acid sequences.
+        :param head: The classifier neural network to use to classify the embedded sequences as interactors or not.
+        :param embedding_droprate: The rate at which embeddings are dropped out.
+        :param num_epochs: The number of epochs to train for.
+        :param steps_per_epoch: Number of mini-batch steps iterated over each epoch. Only really maters for training.
+        :param beta_classifier: Adjusts the amount of weight to give the PPI Classification loss, relative to the Orthologue Locality loss. The loss becomes (1/beta_classifier)*classifier loss + [1-(1/beta_classifier)]*orthologue_loss. Defaults to 1 (equal contribution of both losses).
+        :param use_projection: Whether to use a projection network after the encoder.
+        :param optimizer_type: The optimizer to use while training. Must be one of "ranger21", "ranger21_xx", "adamw", "adamw_1cycle", or "adamw_cosine".
+        :param lr: Learning rate to use.
+        """
         super().__init__()
         self.encoder = encoder
         self.embedding_droprate = embedding_droprate
@@ -332,6 +349,9 @@ def train_e2e_rnn_triplet(
 
     head = MLPHead(embedding_size, do_rate)
 
+    if lr == "auto":
+        lr = 1e-2
+
     net = TripletE2ENet(
         embedding_size,
         encoder,
@@ -342,7 +362,7 @@ def train_e2e_rnn_triplet(
         beta_classifier,
         use_projection,
         optimizer_type,
-        lr if lr is not "auto" else 1e-2
+        lr
     )
 
     num_params = sum(p.numel() for p in net.parameters() if p.requires_grad)

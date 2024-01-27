@@ -20,6 +20,9 @@ from intrepppid.cli import Train, Test
 
 
 class Pipeline(object):
+    """
+    The INTREPPPID CLI
+    """
     def __init__(self):
         self.train = Train
         self.test = Test

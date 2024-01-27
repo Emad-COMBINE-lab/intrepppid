@@ -274,19 +274,30 @@ class IntrepppidDataModule2(pl.LightningDataModule):
         )
 
 
-
 class IntrepppidDataset(Dataset):
     def __init__(
         self,
-        dataset_path,
-        c_type,
-        split,
-        model_file,
-        trunc_len=1000,
-        sos=False,
-        eos=False,
-        negative_omid=False
+        dataset_path: Path,
+        c_type: int,
+        split: str,
+        model_file: Path,
+        trunc_len: int = 1000,
+        sos: bool = False,
+        eos: bool = False,
+        negative_omid: bool = False
     ):
+        """
+        Builds a PyTorch dataset from an HDF5 dataset in the INTREPPPID format.
+
+        :param dataset_path: The path to the HDF5 in the INTREPPPID format.
+        :param c_type: The C-type pairs to use in the dataset.
+        :param split: Which split the data should come from (`i.e.`: ``train``, ``test``, ``val``)
+        :param model_file: The path to the SentencePiece model.
+        :param trunc_len: The length at which to truncate the amino acid sequence.
+        :param sos: Boolean indicating whether a start-of-sequence token should be used.
+        :param eos: Boolean indicating whether an end-of-sequence token should be used.
+        :param negative_omid: Boolean indicating whether to return a negative example for the orthologous locality task.
+        """
         super().__init__()
 
         self.trunc_len = trunc_len
@@ -305,13 +316,6 @@ class IntrepppidDataset(Dataset):
         self.spp = sp.SentencePieceProcessor(model_file=model_file)
 
         self.negative_omid = negative_omid
-
-        #if self.negative_omid:
-        #    with tb.open_file(self.dataset_path) as dataset:
-        #        self.all_omids = [
-        #            x[0]
-        #            for x in dataset.root.orthologs.iterrows()
-        #        ]
 
         self.interactions = []
         self.sequences = {}
@@ -342,10 +346,24 @@ class IntrepppidDataset(Dataset):
         seq: str,
         sp: bool = True,
         pad: bool = True,
-        sampling=True,
-        sos=False,
-        eos=False,
+        sampling: bool = True,
+        sos: bool = False,
+        eos: bool = False,
     ):
+        """
+        Encodes an amino-acid sequence using the SentencePiece model, pads, and adds start/end-of-sequence tokens.
+
+        This is the static method, which doesn't require this class to be instantiated.
+
+        :param trunc_len: The length at which to truncate the amino acid sequence.
+        :param spp: The SentencePiece model to use to encode the sample.
+        :param seq: The amino acid sequence to be encoded.
+        :param sp: A boolean which indicates whether to encode the sequence with SentencePiece
+        :param pad: Whether to pad up to the trunc len (``True``) or not (``False``). Pads on the right with zeroes.
+        :param sampling: Whether to randomly sample tokens (``True``) or not (``False``). See the `SentencePiece library <https://github.com/google/sentencepiece>`_/`manuscript <https://arxiv.org/abs/1808.06226>`_ for details.
+        :param sos: Boolean indicating whether to add a start-of-sequence token (``True``) or not (``False``)
+        :param eos: Boolean indicating whether to add an end-of-sequence token (``True``) or not (``False``)
+        """
         seq = seq[:trunc_len]
 
         if sp:
@@ -369,12 +387,24 @@ class IntrepppidDataset(Dataset):
         return toks
 
     def encode(self, seq: str, sp: bool = True, pad: bool = True):
+        """
+        Encodes an amino-acid sequence using the SentencePiece model, pads, and adds start/end-of-sequence tokens.
+
+        :param seq: The amino acid sequence to be encoded.
+        :param sp: A boolean which indicates whether to encode the sequence with SentencePiece.
+        :param pad: Whether to pad up to the trunc len (``True``) or not (``False``). Pads on the right with zeroes.
+        """
         return self.static_encode(
             self.trunc_len, self.spp, seq, sp, pad, self.sampling, self.sos, self.eos
         )
 
     @cache
     def get_sequence(self, name: str):
+        """
+        Get the amino-acid sequence of a protein in the dataset given its Uniprot Accession.
+
+        :param name: The Uniprot Accession
+        """
         with tb.open_file(self.dataset_path) as dataset:
             seq = dataset.root.sequences.read_where(f'name=="{name}"')[0][1].decode(
                 "utf8"
@@ -385,17 +415,20 @@ class IntrepppidDataset(Dataset):
     @cache
     def get_omid_members(self, omid: int):
         """
-        with tb.open_file(self.dataset_path) as dataset:
-            rows = [
-                x[1].decode("utf8")
-                for x in dataset.root.orthologs.read_where(f"ortholog_group_id=={omid}")
-            ]
+        Get all the Uniprot Accessions of the proteins sharing in the same specified OMA group in this dataset.
+
+        :param omid: The OMA ID.
         """
         rows = self.omid_members[omid]
 
         return rows
 
     def get_omid_member(self, omid: int):
+        """
+        Get a random Uniprot Accessions of a protein in the specified OMA group in this dataset.
+
+        :param omid: The OMA ID.
+        """
         rows = self.get_omid_members(omid)
 
         rand_member = ""
@@ -416,7 +449,26 @@ class IntrepppidDataset(Dataset):
 
         return seq
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
+        """
+        Get a sample from the dataset by its index.
+
+        This returns:
+
+        ``p1_seq, p2_seq, omid1_seq, omid2_seq, omid_neg_seq, label``
+
+        if ``negative_omid`` is ``True``. Otherwise:
+
+        ``p1_seq, p2_seq, omid1_seq, omid2_seq, label``
+
+        Where ``p1_seq`` and ``p2_seq`` are two amino acid sequences whose interaction status is indicated by ``label``,
+        ``omid1_seq`` is the anchor protein sequence for the orthologous locality task, ``omid2_seq`` is the positive
+        protein sequence, and ``omid_neg_seq`` is the negative protein sequence.
+
+        Negative proteins are randomly sampled.
+
+        :param idx: The index of the sample to return.
+        """
         p1, p2, omid_pid, omid_id, label = self.interactions[idx]
 
         p1_seq = self.encode(self.sequences[p1], sp=True, pad=True)
@@ -425,10 +477,9 @@ class IntrepppidDataset(Dataset):
             omid1_seq = self.encode(self.sequences[omid_pid], sp=True, pad=True)
             omid2_seq = self.get_omid_member(omid_id)
         except KeyError:
-            print("OH GOD WHY?!", omid_pid)
+            print("Orthologue not found.", omid_pid)
             omid1_seq = p1_seq
             omid2_seq = p1_seq
-        
 
         if self.negative_omid:
             neg_omid_id = sample(self.omid_members.keys(), 1)[0]
@@ -447,6 +498,9 @@ class IntrepppidDataset(Dataset):
             return p1_seq, p2_seq, omid1_seq, omid2_seq, label
 
     def __len__(self):
+        """
+        Get the number of samples in the dataset.
+        """
         with tb.open_file(self.dataset_path) as dataset:
             l = len(
                 dataset.root["interactions"][f"c{self.c_type}"][
@@ -471,6 +525,21 @@ class IntrepppidDataModule(pl.LightningDataModule):
         eos: bool,
         negative_omid: bool = False
     ):
+        """
+        A `PyTorch Lightning <https://lightning.ai/docs/pytorch/stable/>`_ `Data Module <https://lightning.ai/docs/pytorch/1.9.3/api/pytorch_lightning.core.LightningDataModule.html>`_ for INTREPPPID datasets.
+
+        :param batch_size: The size of the batches for the Data Module to generate
+        :param dataset_path: The path to the HDF5 in the INTREPPPID format.
+        :param c_type: The C-type pairs to use in the dataset.
+        :param trunc_len: The length at which to truncate the amino acid sequence.
+        :param workers: The number of CPU processes used to load data.
+        :param vocab_size: The number of tokens in the SentencePiece vocabular.
+        :param model_file: The path to the SentencePiece model.
+        :param seed: The random seed to use for sampling SentencePiece tokens.
+        :param sos: Boolean indicating whether to add a start-of-sequence token (``True``) or not (``False``)
+        :param eos: Boolean indicating whether to add an end-of-sequence token (``True``) or not (``False``)
+        :param negative_omid: Boolean indicating whether to return a negative example for the orthologous locality task.
+        """
         super().__init__()
 
         sp.set_random_generator_seed(seed)
@@ -498,6 +567,11 @@ class IntrepppidDataModule(pl.LightningDataModule):
         self.negative_omid = negative_omid
 
     def setup(self, stage=None):
+        """
+        Instantiate the internal datasets.
+
+        :param stage: Specifies the stage of training the model (must be one of ``train``, ``val``, or ``test``).
+        """
         self.dataset_train = IntrepppidDataset(
             self.dataset_path,
             self.c_type,
@@ -530,6 +604,9 @@ class IntrepppidDataModule(pl.LightningDataModule):
         )
 
     def train_dataloader(self):
+        """
+        Returns the dataloader for the training set.
+        """
         return DataLoader(
             self.dataset_train,
             batch_size=self.batch_size,
@@ -538,6 +615,9 @@ class IntrepppidDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """
+        Returns the dataloader for the validation set.
+        """
         return DataLoader(
             self.dataset_val,
             batch_size=self.batch_size,
@@ -546,6 +626,9 @@ class IntrepppidDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self):
+        """
+        Returns the dataloader for the test set.
+        """
         return DataLoader(
             self.dataset_test,
             batch_size=self.batch_size,
