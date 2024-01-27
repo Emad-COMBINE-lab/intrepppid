@@ -35,8 +35,8 @@ from intrepppid.classifier.head import MLPHead
 from intrepppid.utils import embedding_dropout, DictLogger
 from torch.optim import AdamW
 from ranger21 import Ranger21
-from typing import Optional, Tuple, Union
-from intrepppid.encoders.barlow import make_rnn_barlow_encoder, make_transformers_barlow_encoder
+from typing import Optional, Union
+from intrepppid.encoders.awd_lstm import AWDLSTMEncoder
 from intrepppid.data.ppi_oma import IntrepppidDataModule
 
 
@@ -132,7 +132,6 @@ class TripletE2ENet(pl.LightningModule):
         norm_beta_classifier = 1 - norm_beta_ssl
 
         loss = norm_beta_classifier * classifier_loss + norm_beta_ssl * triplet_loss
-        #loss = classifier_loss + norm_beta_ssl
 
         self.log(
             f"{stage}_classifier_loss",
@@ -334,17 +333,16 @@ def train_e2e_rnn_triplet(
     data_module.setup("training")
     steps_per_epoch = len(data_module.train_dataloader())
 
-    encoder = make_rnn_barlow_encoder(
-        vocab_size,
+    embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
+
+    encoder = AWDLSTMEncoder(
+        embedder,
         embedding_size,
+        embedding_droprate,
         rnn_num_layers,
         rnn_dropout_rate,
         variational_dropout,
-        bi_reduce,
-        batch_size,
-        embedding_droprate,
-        num_epochs,
-        steps_per_epoch,
+        bi_reduce
     )
 
     head = MLPHead(embedding_size, do_rate)
@@ -415,159 +413,6 @@ def train_e2e_rnn_triplet(
         )
 
     trainer.fit(net, data_module, ckpt_path=checkpoint_path)
-
-    test_results = trainer.test(dataloaders=data_module, ckpt_path="best")
-
-    dict_logger.metrics["test_results"] = test_results
-
-    with open(log_path / model_name / "metrics.json", "w") as f:
-        json.dump(dict_logger.metrics, f, indent=3)
-
-
-def train_e2e_transformer_triplet(
-    vocab_size: int,
-    trunc_len: int,
-    embedding_size: int,
-    transformer_num_layers: int,
-    transformer_feedforward_size: int,
-    transformer_num_heads: int,
-    variational_dropout: bool,
-    ppi_dataset_path: Path,
-    sentencepiece_path: Path,
-    log_path: Path,
-    hyperparams_path: Path,
-    chkpt_dir: Path,
-    c_type: int,
-    model_name: str,
-    workers: int,
-    embedding_droprate: float,
-    do_rate: float,
-    num_epochs: int,
-    batch_size: int,
-    encoder_only_steps: int,
-    classifier_warm_up: int,
-    beta_classifier: float,
-    use_projection: bool,
-    projection_dropconnect: float,
-    optimizer_type: str,
-    lr: float,
-    resume_checkpoint_path: Optional[Path] = None,
-    fine_tune_mode: bool = False,
-    seed: Optional[int] = None,
-):
-    makedirs(chkpt_dir, exist_ok=True)
-    makedirs(log_path, exist_ok=True)
-    makedirs(hyperparams_path.parent, exist_ok=True)
-
-    seed = random.randint(0, 99999) if seed is None else seed
-
-    seed_everything(seed)
-
-    hyperparameters = {
-        "architecture": "E2ETransformerBarlow",
-        "vocab_size": vocab_size,
-        "trunc_len": trunc_len,
-        "embedding_size": embedding_size,
-        "transformer_num_layers": transformer_num_layers,
-        "transformer_feedforward_size": transformer_feedforward_size,
-        "transformer_num_heads": transformer_num_heads,
-        "variational_dropout": variational_dropout,
-        "ppi_dataset_path": str(ppi_dataset_path),
-        "sentencepiece_path": str(sentencepiece_path),
-        "log_path": str(log_path),
-        "hyperparams_path": str(hyperparams_path),
-        "chkpt_dir": str(chkpt_dir),
-        "model_name": model_name,
-        "workers": workers,
-        "embedding_droprate": embedding_droprate,
-        "do_rate": do_rate,
-        "num_epochs": num_epochs,
-        "batch_size": batch_size,
-        "encoder_only_steps": encoder_only_steps,
-        "classifier_warm_up": classifier_warm_up,
-        "beta_classifier": beta_classifier,
-        "use_projection": use_projection,
-        "projection_dropconnect": projection_dropconnect,
-        "optimizer_type": optimizer_type,
-        "lr": lr,
-        "resume_checkpoint_path": resume_checkpoint_path,
-        "fine_tune_mode": fine_tune_mode,
-        "seed": seed,
-    }
-
-    with open(hyperparams_path, "w") as f:
-        json.dump(hyperparameters, f)
-
-    data_module = IntrepppidDataModule(
-        batch_size=batch_size,
-        dataset_path=ppi_dataset_path,
-        c_type=c_type,
-        trunc_len=trunc_len,
-        workers=workers,
-        vocab_size=vocab_size,
-        model_file=sentencepiece_path,
-        seed=seed,
-        sos=True,
-        eos=True,
-        negative_omid=True,
-    )
-
-    data_module.setup("training")
-    steps_per_epoch = len(data_module.train_dataloader())
-
-    encoder = make_transformers_barlow_encoder(
-        vocab_size,
-        embedding_size,
-        transformer_num_layers,
-        do_rate,
-        transformer_feedforward_size,
-        transformer_num_heads,
-        nn.Mish(),
-        1e-5,
-        batch_size,
-        embedding_droprate,
-        num_epochs,
-        steps_per_epoch,
-        trunc_len,
-    )
-
-    head = MLPHead(embedding_size, do_rate)
-
-    net = TripletE2ENet(
-        embedding_size=embedding_size,
-        encoder=encoder,
-        head=head,
-        embedding_droprate=embedding_droprate,
-        num_epochs=num_epochs,
-        steps_per_epoch=steps_per_epoch,
-        beta_classifier=beta_classifier,
-        use_projection=use_projection,
-        optimizer_type=optimizer_type,
-        lr=1e-2
-    )
-
-    checkpoint_callback = ModelCheckpoint(
-        monitor="val_loss",
-        dirpath=chkpt_dir,
-        filename=model_name + "-{epoch:02d}-{val_loss:.2f}",
-    )
-
-    dict_logger = DictLogger()
-    tb_logger = TensorBoardLogger(f"{log_path}", name="tensorboard", version=model_name)
-    lr_monitor = LearningRateMonitor(logging_interval="step")
-    swa = StochasticWeightAveraging(swa_lrs=1e-2)
-
-    trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=1,
-        max_epochs=num_epochs,
-        precision=16,
-        logger=[dict_logger, tb_logger],
-        callbacks=[checkpoint_callback, lr_monitor, swa],
-        log_every_n_steps=2,
-    )
-
-    trainer.fit(net, data_module, ckpt_path=resume_checkpoint_path)
 
     test_results = trainer.test(dataloaders=data_module, ckpt_path="best")
 

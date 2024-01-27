@@ -16,7 +16,7 @@
 
 
 import fire
-from intrepppid.cli import Train, Test
+from intrepppid.cli import Train
 
 
 class Pipeline(object):
@@ -25,7 +25,6 @@ class Pipeline(object):
     """
     def __init__(self):
         self.train = Train
-        self.test = Test
 
 
 if __name__ == "__main__":

@@ -15,16 +15,3 @@
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
 from intrepppid.classifier.head.mlp import MLPHead
-from intrepppid.classifier.head.attention import AttentionHead
-from typing import Dict, Any
-from torch import nn
-
-
-def get_head(hyperparams: Dict[str, Any]) -> nn.Module:
-    architecture = hyperparams["architecture"]
-    del hyperparams[architecture]
-
-    if architecture == "MLPHead":
-        return MLPHead(**architecture)
-    else:
-        raise ValueError("Unexpected architecture. Must be one of 'MLPHead'.")

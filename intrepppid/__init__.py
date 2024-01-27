@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with this programme. If not, see
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
+from torch import nn
 
-
-from intrepppid.encoders.barlow import make_rnn_barlow_encoder
+from intrepppid.encoders.awd_lstm import AWDLSTMEncoder
 from intrepppid.e2e.e2e_triplet import TripletE2ENet
 from intrepppid.classifier.head import MLPHead
 
@@ -28,7 +28,6 @@ def intrepppid_network(
         rnn_dropout_rate: float = 0.3,
         variational_dropout: bool = False,
         bi_reduce: str = "last",
-        batch_size: int = 80,
         embedding_droprate: float = 0.3,
         num_epochs: int = 100,
         do_rate: float = 0.3,
@@ -50,7 +49,6 @@ def intrepppid_network(
     :param rnn_dropout_rate: The dropconnect rate for the AWD-LSTM encoder. Defaults to 0.3.
     :param variational_dropout: Whether to use variational dropout, as described in the AWD-LSTM manuscript. Defaults to False.
     :param bi_reduce: Method to reduce the two LSTM embeddings for both directions. Must be one of "concat", "max", "mean", "last". Defaults to "last".
-    :param batch_size: The number of samples to use in the batch.
     :param embedding_droprate: The amount of Embedding Dropout to use (a la AWD-LSTM). Defaults to 0.3.
     :param num_epochs: Number of epochs to train the model for.
     :param do_rate: The amount of dropout to use in the MLP Classifier. Defaults to 0.3.
@@ -60,17 +58,16 @@ def intrepppid_network(
     :param optimizer_type: The optimizer to use while training. Must be one of "ranger21", "ranger21_xx", "adamw", "adamw_1cycle", or "adamw_cosine". Defaults to "ranger21".
     """
 
-    encoder = make_rnn_barlow_encoder(
-        vocab_size,
+    embedder = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
+
+    encoder = AWDLSTMEncoder(
+        embedder,
         embedding_size,
+        embedding_droprate,
         rnn_num_layers,
         rnn_dropout_rate,
         variational_dropout,
-        bi_reduce,
-        batch_size,
-        embedding_droprate,
-        num_epochs,
-        steps_per_epoch,
+        bi_reduce
     )
 
     head = MLPHead(embedding_size, do_rate)
