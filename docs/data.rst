@@ -4,7 +4,12 @@ Data
 Precomputed Datasets
 --------------------
 
-You can download precomputed datasets below:
+You can download precomputed datasets from the sources below:
+
+1. `Zenodo <https://doi.org/10.5281/zenodo.10594149>`_ (DOI: 10.5281/zenodo.10594149)
+2. `Internet Archive <https://archive.org/details/intrepppid_datasets.tar>`_
+
+All datasets are made available under the `Creative Commons Attribution-ShareAlike 4.0 International <https://creativecommons.org/licenses/by-sa/4.0/legalcode>`_ license.
 
 Dataset Format
 --------------

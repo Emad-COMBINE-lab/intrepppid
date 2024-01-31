@@ -6,7 +6,7 @@ INTREPPPID has a :abbr:`CLI (Command Line Interface)` which can be used to easil
 Train
 -----
 
-To train the INTREPPPID model as it was in the manuscript, use the ``python -m e2e_rnn_triplet train e2e_rnn_triplet`` command:
+To train the INTREPPPID model as it was in the manuscript, use the ``train e2e_rnn_triplet`` command:
 
 .. code:: bash
 
