@@ -28,5 +28,9 @@ class Pipeline(object):
         self.train = Train
 
 
-if __name__ == "__main__":
+def main():
     fire.Fire(Pipeline)
+
+
+if __name__ == "__main__":
+    main()

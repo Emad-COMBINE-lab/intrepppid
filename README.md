@@ -14,15 +14,19 @@ Here are some quick highlights, but be sure to [read the documentation](https://
 
 ### Installing
 
-To install INTREPPPID, clone the repository and install the dependencies using `pip` and the `requirements.txt` file at
-the root of the repository
+The easiest way to install PPI Origami is to use [pip](https://pip.pypa.io/en/stable/>) to retrieve the PPI Origami
+release from [PyPI](https://pypi.org/project/ppi-origami>).
+
+```bash
+pip install intrepppid
+```
+
+Alternatively, clone the repository and use [poetry](https://python-poetry.org/) to install the dependencies
 
 ```bash
 git clone https://github.com/jszym/intrepppid
 cd intreppid
-python -m virtualenv venv
-source venv/bin/activate
-pip install -r requirements.txt
+poetry install
 ```
 
 ### Training Models
@@ -30,7 +34,7 @@ pip install -r requirements.txt
 To train INTREPPPID, simply use the `train e2e_rnn_triplet` command like so:
 
 ```bash
-python -m intrepppid train e2e_rnn_triplet DATASET.h5 spm.model 3 100 80 --seed 3927704 --vocab_size 250 --trunc_len 1500 --embedding_size 64 --rnn_num_layers 2 --rnn_dropout_rate 0.3 --variational_dropout false --bi_reduce last --workers 4 --embedding_droprate 0.3 --do_rate 0.3 --log_path logs/e2e_rnn_triplet --beta_classifier 2 --use_projection false --optimizer_type ranger21_xx --lr 1e-2
+intrepppid train e2e_rnn_triplet DATASET.h5 spm.model 3 100 80 --seed 3927704 --vocab_size 250 --trunc_len 1500 --embedding_size 64 --rnn_num_layers 2 --rnn_dropout_rate 0.3 --variational_dropout false --bi_reduce last --workers 4 --embedding_droprate 0.3 --do_rate 0.3 --log_path logs/e2e_rnn_triplet --beta_classifier 2 --use_projection false --optimizer_type ranger21_xx --lr 1e-2
 ```
 
 ### Documentation

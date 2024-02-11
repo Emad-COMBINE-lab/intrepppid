@@ -1,6 +1,17 @@
 Installation
 ============
 
+Using ``pip``
+-------------
+
+The easiest way to install PPI Origami is to use `pip <https://pip.pypa.io/en/stable/>`_ to retrieve the PPI Origami
+release from `PyPI <https://pypi.org/project/ppi-origami>`_.
+
+.. code-block:: bash
+
+    pip install intrepppid
+
+
 From Source
 -----------
 
