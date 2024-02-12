@@ -1,5 +1,7 @@
 # INTREPPPID
 
+[![DOI](https://zenodo.org/badge/748346659.svg)](https://zenodo.org/doi/10.5281/zenodo.10652231)
+
 ***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**rotein **I**nteractions using **D**eep Learning*
 
 ---
