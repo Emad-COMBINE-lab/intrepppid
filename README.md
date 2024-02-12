@@ -1,6 +1,6 @@
 # INTREPPPID
 
-***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**protein **I**nteractions using **D**eep Learning*
+***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**rotein **I**nteractions using **D**eep Learning*
 
 ---
 
@@ -45,7 +45,7 @@ Be sure to [read the documentation]((https://emad-combine-lab.github.io/intreppp
 
 INTREPPPID
 
-***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**protein **I**nteractions using **D**eep Learning*
+***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**rotein **I**nteractions using **D**eep Learning*
 
 Copyright (C) 2023  Joseph Szymborski
 
