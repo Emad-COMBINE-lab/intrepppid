@@ -1,6 +1,6 @@
 # INTREPPPID
 
-[![DOI](https://zenodo.org/badge/748346659.svg)](https://zenodo.org/doi/10.5281/zenodo.10652231)
+[![DOI](https://zenodo.org/badge/748346659.svg)](https://zenodo.org/doi/10.5281/zenodo.10652231) [![DOI](https://img.shields.io/badge/bioRxiv-10.1101/2024.02.13.580150-B31B1B.svg)](https://doi.org/10.1101/2024.02.13.580150)
 
 ***IN**corporating **TR**iplet **E**rror for **P**redicting **P**rotein-**P**rotein **I**nteractions using **D**eep Learning*
 
@@ -9,6 +9,8 @@
 
 INTREPPPID is a deep learning model for predicting protein interactions. 
 It's especially good at making prediction on species other than those it was trained on (cross-species prediction).
+
+You can find more information from [our pre-print](https://doi.org/10.1101/2024.02.13.580150).
 
 ## How to Use INTREPPPID
 
@@ -42,6 +44,26 @@ intrepppid train e2e_rnn_triplet DATASET.h5 spm.model 3 100 80 --seed 3927704 --
 ### Documentation
 
 Be sure to [read the documentation]((https://emad-combine-lab.github.io/intrepppid/)) for more details.
+
+## Citation
+
+If you use or refer to INTREPPPID, kindly cite our pre-print:
+
+> Joseph Szymborski, Amin Emad. [INTREPPPID - An Orthologue-Informed Quintuplet Network for Cross-Species Prediction of Protein-Protein Interaction](https://doi.org/10.1101/2024.02.13.580150). bioRxiv. 2024 Jan 1; DOI:2024.02.13.580150. 
+
+also available in BibTex format:
+
+```
+@article{Joseph Szymborski_Amin Emad_2024,
+  title={INTREPPPID - An Orthologue-Informed Quintuplet Network for Cross-Species Prediction of Protein-Protein Interaction},
+  DOI={10.1101/2024.02.13.580150},
+  journal={bioRxiv},
+  author={Joseph Szymborski and Amin Emad},
+  year={2024},
+  month=jan,
+  pages={2024.02.13.580150}
+}
+```
 
 ## License
 
