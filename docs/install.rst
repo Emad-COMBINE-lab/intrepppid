@@ -50,7 +50,5 @@ You can install INTREPPPID from source as follows:
     COMMANDS
         COMMAND is one of the following:
 
-         test
-
          train
 
