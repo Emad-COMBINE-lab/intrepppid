@@ -16,7 +16,7 @@
 
 
 import fire
-from intrepppid.cli import Train
+from intrepppid.cli import Train, Infer
 
 
 class Pipeline(object):
@@ -26,6 +26,7 @@ class Pipeline(object):
 
     def __init__(self):
         self.train = Train
+        self.infer = Infer
 
 
 def main():

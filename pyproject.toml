@@ -27,6 +27,8 @@ tqdm = "4.64.1"
 ranger21 = "^0.1.0"
 
 
+lmdb = "^1.4.1"
+requests = "^2.32.2"
 [tool.poetry.group.dev.dependencies]
 black = "24.1.0"
 furo = "2023.9.10"

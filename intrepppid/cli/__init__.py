@@ -15,3 +15,4 @@
 # <https://www.gnu.org/licenses/agpl-3.0.en.html>.
 
 from intrepppid.cli.train import Train
+from intrepppid.cli.infer import Infer
