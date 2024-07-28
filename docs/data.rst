@@ -1,6 +1,11 @@
 Data
 ====
 
+Pretrained Weights
+------------------
+
+You can download the pre-trained weights used in the INTREPPPID manuscript from the `GitHub releases page <https://github.com/Emad-COMBINE-lab/intrepppid/releases>`_.
+
 Precomputed Datasets
 --------------------
 
@@ -111,5 +116,3 @@ Here is the schema for the tables:
      - ``Bool``
      - ``False``
      - Label indicating whether ``protein_id1`` and ``protein_id2`` interact with one another.
-
-Everything under the

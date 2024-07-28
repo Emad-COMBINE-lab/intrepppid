@@ -116,3 +116,60 @@ To train the INTREPPPID model as it was in the manuscript, use the ``train e2e_r
      - ``ranger21``
      - ``ranger21_xx``
      - The optimizer to use while training. Must be one of ``ranger21``, ``ranger21_xx``, ``adamw``, ``adamw_1cycle``, or ``adamw_cosine``.
+
+Infer
+-----
+
+To infer edges using the cli, you'll need to use the ``intrepppid infer`` command.
+
+Currently, it is only possible to infer from a CSV using the following command
+
+.. code:: bash
+
+    Usage: intrepppid infer from_csv INTERACTIONS_PATH SEQUENCES_PATH WEIGHTS_PATH SPM_PATH OUT_PATH <flags>
+      optional flags:        --trunc_len | --low_memory | --db_path |
+                             --dont_populate_db | --device | --get_from_uniprot
+
+Here's an example of inferring
+
+.. list-table::
+   :header-rows: 1
+
+   * - Argument/Flag
+     - Default
+     - Description
+   * - ``INTERACTIONS_PATH``
+     - None
+     - Path to the CSV file which contains pairs of protein IDs along with interaction identifiers. The interaction between the amino acid sequences that correspond to these identifiers will be identified. The protein identifiers must correspond to sequences in the FASTA file provided.
+   * - ``SEQUENCES_PATH``
+     - None
+     - Path to the FASTA file which contains the sequences of the protein identifiers referred to in ``INTERACTIONS_PATH``
+   * - ``WEIGHTS_PATH``
+     - None
+     - Path to the pre-trained weights for the INTREPPPID model. You can learn how to download them `here <data.html#pretrained-weights>`_.
+   * - ``SPM_PATH``
+     - None
+     - Path to the trained SentencePiece model. These are included in the weights on the `GitHub release page <https://github.com/Emad-COMBINE-lab/intrepppid/releases>`_.
+   * - ``OUT_PATH``
+     - None
+     - The path where the inferred interaction probabilities will be written in CSV format.
+   * - ``--trunc_len``
+     - 1500
+     - Maximum number tokens to pass to the model. If a sequence has more tokens than ``trunc_len``, they will be truncated. Note: tokens are between 1-2 amino acids long, so this corresponds to between 1500-3000 amino acids.
+   * - ``--low_memory``
+     - False
+     - Operate in "low-memory" mode. When ``low_memory`` is False, all of the tokenized sequences computed from ``SEQUENCES_PATH`` must fit in memory. When ``low_memory`` is True, then tokenized sequences will be stored on-disk in a LMDB database, with minimal memory over-head.
+   * - ``--db_path``
+     - None
+     - If low-memory is true, this specifies the folder where the tokenized sequence database will be stored. If not specified, a temporary folder will be used. Does nothing if ``low_memory`` is False.
+   * - ``--dont_populate_db``
+     - False
+     - If low-memory is true, this uses the tokenized sequences stored in an existing database specified in ``db_path``. It skips reading and tokenizing the sequences as a result. Does nothing if ``low_memory`` is false.
+   * - ``--device``
+     - "cpu"
+     - What device to run INTREPPPID on. Valid values are described in the `PyTorch Documentation <https://pytorch.org/docs/stable/tensor_attributes.html#torch.device>`_, but suffice to say "cpu" runs on the CPU, "cuda" runs on a CUDA-capable GPU, and "cuda:0" runs on the zeroth CUDA-capable GPU.
+   * - ``--get_from_uniprot``
+     - False
+     - When True, identifiers in ``INTERACTIONS_PATH`` are not found among the identifiers in ``SEQUENCES_PATH``, it'll look-up the sequences on UniProt.
+
+

@@ -17,12 +17,79 @@ Checkpoints will be saved in a folder ``logs/e2e_rnn_triplet/model_name/chkpt`` 
 Inference
 ---------
 
-The easiest way to infer using INTREPPPID is through the website `https://PPI.bio <https://ppi.bio>`_. However, you may wish to infer locally using INTREPPID for various reasons, `e.g.`: to infer using your own custom checkpoints.
+There are three ways to infer using INTREPPPID:
 
-Preparing Data
-^^^^^^^^^^^^^^
+1. Using PPI.bio
+^^^^^^^^^^^^^^^^
 
-To infer using INTREPPPID, you'll have to use the :doc:`API <api>`.
+The easiest way to infer using INTREPPPID is through the website `https://PPI.bio <https://ppi.bio>`_.
+
+2. Using the CLI
+^^^^^^^^^^^^^^^^
+
+The INTREPPPID CLI has an ``infer`` command you can use to infer interaction probabilities.
+You can read all the details on the `CLI page <cli.html#infer>`_, but an example of running the command would look like:
+
+.. code:: shell
+
+    intrepppid infer from_csv interactions.csv sequences.fasta weights.ckpt spm.model output.csv
+
+Let's break down all those files we've passed as arguments:
+
+1. interactions.csv: Interactions CSV
+2. sequences.fasta: Sequences FASTA
+3. weights.ckpt: Weights file
+4. spm.model: SentencePiece model file
+5. output.csv: Where the inferred interaction probabilities will be written
+
+The interactions CSV must be of the format
+
+.. code::
+
+    INTERACTION ID, PROTEIN ID 1, PROTEIN ID 2
+
+An example of the first few lines of an interactions CSV might be:
+
+.. code::
+
+    1,P08913,P30047
+    2,Q71DI3,Q7KZ85
+    3,O15498,Q7Z406
+
+The sequence FASTA is just a FASTA file with sequences that correspond to the interactions CSV file.
+
+.. code::
+
+    >P08913
+    MFRQEQPLAEGSFAPMGSLQPDAGNASWNG...
+    >P30047
+    MPYLLISTQIRMEVGPTMVGDEQSDPELMQ...
+    >Q71DI3
+    MARTKQTARKSTGGKAPRKQLATKAARKSA...
+
+The third component needed is an INTREPPPID weights file. You can either get one from training INTREPPPID from scratch
+or `downloading pre-trained weights <data.html#pretrained-weights>`_.
+
+The fourth component is a SentencePiece model file. The easiest way to get one is to just download the one we trained,
+which is included in our pre-trained weights as ``spm.model``.
+
+The final component is a CSV with inferred interaction probabilities, which looks like:
+
+.. code::
+
+    1,0.5125845074653625
+    2,0.6327105164527893
+    3,0.7151195406913757
+
+Note that these interaction probabilities are just examples, they don't correspond to real inferred interaction
+probabilities.
+
+3. Using the Python API
+^^^^^^^^^^^^^^^^^^^^^^^
+
+**Prepare the Data**
+
+The final way to infer with INTREPPPID is to use the :doc:`Python API <api>`.
 
 The first step is to get the amino acid sequences you want to infer. This can be as simple as defining a list of sequence pairs:
 
@@ -43,11 +110,11 @@ You'll need to encode all the sequence, and you'll need to use the same settings
     trunc_len = 1500
     spp = sp.SentencePieceProcessor(model_file=SPM_FILE)
 
-    encoded_sequence_pairs = []
-
     for p1, p2 in sequence_pairs:
         x1 = IntrepppidDataset.static_encode(trunc_len, spp, p1)
         x2 = IntrepppidDataset.static_encode(trunc_len, spp, p2)
+
+        x1, x2 = torch.tensor(x1), torch.tensor(x2)
 
         # Infer interactions here
 
@@ -80,8 +147,7 @@ Alternatively, you may be interested in loading sequences from an INTREPPPID dat
         p1_seq, p2_seq, _, _, _, label = batch
         # Infer interactions here
 
-Load the INTREPPPID network
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Load the INTREPPPID network**
 
 We must now instantiate the INTREPPPID network and load weights.
 
@@ -89,6 +155,7 @@ If you trained the INTREPPPID with the manuscript defaults, you pass any values 
 
 .. code:: python
 
+    import torch
     from intrepppid import intrepppid_network
 
     # steps_per_epoch is 0 here because it is not used for inference
@@ -100,8 +167,7 @@ If you trained the INTREPPPID with the manuscript defaults, you pass any values 
 
     net.load_state_dict(chkpt['state_dict'])
 
-Infer Interactions
-^^^^^^^^^^^^^^^^^^
+**Infer Interactions**
 
 Putting everything together, you get:
 
@@ -111,7 +177,10 @@ Putting everything together, you get:
         x1 = IntrepppidDataset.static_encode(trunc_len, spp, p1)
         x2 = IntrepppidDataset.static_encode(trunc_len, spp, p2)
 
+        x1, x2 = torch.tensor(x1), torch.tensor(x2)
+
         y_hat_logits = net(x1, x2)
+
         # The forward pass returns logits, so you need to activate with sigmoid
         y_hat = torch.sigmoid(y_hat_logits)
 
@@ -123,5 +192,6 @@ or if you were using the INTREPPPID Data Module
         x1, x2, _, _, _, label = batch
 
         y_hat_logits = net(x1, x2)
+
         # The forward pass returns logits, so you need to activate with sigmoid
         y_hat = torch.sigmoid(y_hat_logits)
