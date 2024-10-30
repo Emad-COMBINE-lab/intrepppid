@@ -1,0 +1,67 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: INTREPPPID
+message: ' Incorporating Triplet Error for Predicting PPIs using Deep Learning '
+type: software
+authors:
+  - given-names: Joseph
+    family-names: Szymborski
+    email: joseph.szymborski@mail.mcgill.ca
+    affiliation: >-
+      Department of Electrical and Computer Engineering,
+      McGill University
+    orcid: 'https://orcid.org/0000-0003-1559-6225'
+  - given-names: Amin
+    family-names: Emad
+    email: amin.emad@mcgill.ca
+    affiliation: >-
+      Department of Electrical and Computer Engineering,
+      McGill University
+    orcid: 'https://orcid.org/0000-0002-5108-4887'
+identifiers:
+  - type: doi
+    value: 10.1093/bib/bbae405
+    description: Publication in Briefings in Bioinformatics
+  - type: doi
+    value: 10.5281/zenodo.10652231
+    description: Zenodo Record
+repository-code: 'https://github.com/Emad-COMBINE-lab/intrepppid'
+url: 'https://emad-combine-lab.github.io/intrepppid/'
+abstract: >-
+  An overwhelming majority of protein–protein interaction
+  (PPI) studies are conducted in a select few model
+  organisms largely due to constraints in time and cost of
+  the associated ‘wet lab’ experiments. In silico PPI
+  inference methods are ideal tools to overcome these
+  limitations, but often struggle with cross-species
+  predictions. We present INTREPPPID, a method that
+  incorporates orthology data using a new ‘quintuplet’
+  neural network, which is constructed with five parallel
+  encoders with shared parameters. INTREPPPID incorporates
+  both a PPI classification task and an orthologous locality
+  task. The latter learns embeddings of orthologues that
+  have small Euclidean distances between them and large
+  distances between embeddings of all other proteins.
+  INTREPPPID outperforms all other leading PPI inference
+  methods tested on both the intraspecies and cross-species
+  tasks using strict evaluation datasets. We show that
+  INTREPPPID’s orthologous locality loss increases
+  performance because of the biological relevance of the
+  orthologue data and not due to some other specious aspect
+  of the architecture. Finally, we introduce PPI.bio and PPI
+  Origami, a web server interface for INTREPPPID and a
+  software tool for creating strict evaluation datasets,
+  respectively. Together, these two initiatives aim to make
+  both the use and development of PPI inference tools more
+  accessible to the community.
+keywords:
+  - protein-protein interactions
+  - orthology
+  - cross-species
+  - deep learning
+license: AGPL-3.0-or-later
+commit: 1fb690c
+version: '1'
+date-released: '2024-02-12'
