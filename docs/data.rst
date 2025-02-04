@@ -46,9 +46,9 @@ Each INTREPPPID dataset must have the following hierarchical structure
        │    └── c2_test
        │
        └── c3
-            ├── c2_train
-            ├── c2_val
-            └── c2_test
+            ├── c3_train
+            ├── c3_val
+            └── c3_test
 
 All but one of the "c" folders under "interactions" need be present, so long as that is the dataset you specify in the train step with the ``--c_type`` flag.
 
